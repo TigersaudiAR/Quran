@@ -102,9 +102,9 @@
     "validate-github-github-docs-urls": "tsx src/links/scripts/validate-github-github-docs-urls/index.ts",
     "warmup-remotejson": "tsx src/archives/scripts/warmup-remotejson.ts",
     "what-docs-early-access-branch": "tsx src/early-access/scripts/what-docs-early-access-branch.js"
-  ,
-  "lint-staged": {
-    "*.{js,mjs,ts,tsx}": "eslint --cache --fix",
+ ,
+   "lint-staged",
+    "*.{js,mjs,ts,tsx ": "eslint --cache --fix",
     "*.{js,mjs,scss,ts,tsx,yml,yaml}": "prettier --write",
     "{content,data}/**/*.md": "npm run lint-content -- --precommit --paths"
   },
