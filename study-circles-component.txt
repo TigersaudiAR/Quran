@@ -1,0 +1,123 @@
+// components/StudyCircles.js
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import './StudyCircles.css';
+
+const StudyCircles = () => {
+  const [circles, setCircles] = useState([]);
+  const [userCircles, setUserCircles] = useState([]);
+  const [filteredCircles, setFilteredCircles] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('browse');
+  const [filters, setFilters] = useState({
+    level: 'all',
+    type: 'all',
+    gender: 'all',
+    ageGroup: 'all',
+    search: ''
+  });
+  const [selectedCircle, setSelectedCircle] = useState(null);
+  const [userAssignments, setUserAssignments] = useState([]);
+  
+  useEffect(() => {
+    // Simulate loading data from an API
+    setTimeout(() => {
+      setCircles(mockCircles);
+      
+      // Load user circles from local storage
+      const savedUserCircles = localStorage.getItem('userCircles');
+      if (savedUserCircles) {
+        setUserCircles(JSON.parse(savedUserCircles));
+      }
+      
+      // Load user assignments from local storage
+      const savedAssignments = localStorage.getItem('userAssignments');
+      if (savedAssignments) {
+        setUserAssignments(JSON.parse(savedAssignments));
+      } else {
+        // Initialize with mock data if empty
+        setUserAssignments(mockAssignments);
+        localStorage.setItem('userAssignments', JSON.stringify(mockAssignments));
+      }
+      
+      setIsLoading(false);
+    }, 1000);
+  }, []);
+  
+  useEffect(() => {
+    applyFilters();
+  }, [filters, circles]);
+  
+  const applyFilters = () => {
+    let result = [...circles];
+    
+    // Apply level filter
+    if (filters.level !== 'all') {
+      result = result.filter(circle => circle.level === filters.level);
+    }
+    
+    // Apply type filter
+    if (filters.type !== 'all') {
+      result = result.filter(circle => circle.type === filters.type);
+    }
+    
+    // Apply gender filter
+    if (filters.gender !== 'all') {
+      result = result.filter(circle => circle.gender === filters.gender);
+    }
+    
+    // Apply age group filter
+    if (filters.ageGroup !== 'all') {
+      result = result.filter(circle => circle.ageGroup === filters.ageGroup);
+    }
+    
+    // Apply search filter
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase();
+      result = result.filter(circle => 
+        circle.name.toLowerCase().includes(searchLower) ||
+        circle.description.toLowerCase().includes(searchLower) ||
+        circle.instructor.name.toLowerCase().includes(searchLower)
+      );
+    }
+    
+    setFilteredCircles(result);
+  };
+  
+  const handleFilterChange = (filterName, value) => {
+    setFilters({
+      ...filters,
+      [filterName]: value
+    });
+  };
+  
+  const joinCircle = (circleId) => {
+    // Check if already joined
+    if (userCircles.includes(circleId)) {
+      return;
+    }
+    
+    // Add to user circles
+    const updatedUserCircles = [...userCircles, circleId];
+    setUserCircles(updatedUserCircles);
+    
+    // Save to local storage
+    localStorage.setItem('userCircles', JSON.stringify(updatedUserCircles));
+    
+    alert('تم الانضمام إلى الحلقة بنجاح');
+  };
+  
+  const leaveCircle = (circleId) => {
+    // Remove from user circles
+    const updatedUserCircles = userCircles.filter(id => id !== circleId);
+    setUserCircles(updatedUserCircles);
+    
+    // Save to local storage
+    localStorage.setItem('userCircles', JSON.stringify(updatedUserCircles));
+    
+    alert('تم مغادرة الحلقة');
+  };
+  
+  const isUserInCircle = (circleId) => {
+    return userCircles.includes(circleId);
+  };

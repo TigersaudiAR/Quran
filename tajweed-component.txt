@@ -1,0 +1,527 @@
+// components/Tajweed.js
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import './Tajweed.css';
+
+const Tajweed = () => {
+  const [activeTab, setActiveTab] = useState('lessons');
+  const [lessonCategories, setLessonCategories] = useState([]);
+  const [activeLessonCategory, setActiveLessonCategory] = useState(null);
+  const [selectedLesson, setSelectedLesson] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [userProgress, setUserProgress] = useState({
+    completedLessons: [],
+    quizScores: {}
+  });
+  
+  useEffect(() => {
+    // Simulate fetching data from an API
+    const fetchTajweedData = async () => {
+      try {
+        setIsLoading(true);
+        
+        // In a real app, this would be an API call
+        setTimeout(() => {
+          setLessonCategories(tajweedData.categories);
+          setActiveLessonCategory(tajweedData.categories[0]);
+          
+          // Load user progress from localStorage
+          const savedProgress = localStorage.getItem('tajweedProgress');
+          if (savedProgress) {
+            setUserProgress(JSON.parse(savedProgress));
+          }
+          
+          setIsLoading(false);
+        }, 1000);
+      } catch (error) {
+        console.error('Error fetching tajweed data:', error);
+        setIsLoading(false);
+      }
+    };
+    
+    fetchTajweedData();
+  }, []);
+  
+  const handleCategoryClick = (category) => {
+    setActiveLessonCategory(category);
+    setSelectedLesson(null);
+  };
+  
+  const handleLessonClick = (lesson) => {
+    setSelectedLesson(lesson);
+  };
+  
+  const handleLessonComplete = () => {
+    const updatedProgress = {
+      ...userProgress,
+      completedLessons: [...userProgress.completedLessons, selectedLesson.id]
+    };
+    
+    setUserProgress(updatedProgress);
+    localStorage.setItem('tajweedProgress', JSON.stringify(updatedProgress));
+  };
+  
+  const handleQuizComplete = (lessonId, score) => {
+    const updatedProgress = {
+      ...userProgress,
+      quizScores: {
+        ...userProgress.quizScores,
+        [lessonId]: score
+      },
+      completedLessons: userProgress.completedLessons.includes(lessonId) 
+        ? userProgress.completedLessons 
+        : [...userProgress.completedLessons, lessonId]
+    };
+    
+    setUserProgress(updatedProgress);
+    localStorage.setItem('tajweedProgress', JSON.stringify(updatedProgress));
+  };
+  
+  const isLessonCompleted = (lessonId) => {
+    return userProgress.completedLessons.includes(lessonId);
+  };
+  
+  const getLessonQuizScore = (lessonId) => {
+    return userProgress.quizScores[lessonId] || null;
+  };
+  
+  const filterLessons = (lessons) => {
+    if (!searchQuery) return lessons;
+    
+    return lessons.filter(lesson => 
+      lesson.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      lesson.description.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  };
+  
+  const calculateProgress = () => {
+    if (!lessonCategories.length) return 0;
+    
+    const totalLessons = lessonCategories.reduce((total, category) => 
+      total + category.lessons.length, 0);
+    
+    const completedPercentage = (userProgress.completedLessons.length / totalLessons) * 100;
+    return Math.round(completedPercentage);
+  };
+  
+  if (isLoading) {
+    return (
+      <div className="tajweed-loading">
+        <div className="loader"></div>
+        <p>جاري تحميل دروس التجويد...</p>
+      </div>
+    );
+  }
+  
+  return (
+    <div className="tajweed-container">
+      <div className="tajweed-header">
+        <h2>تعلم أحكام التجويد</h2>
+        <p>تعلم قواعد تجويد القرآن الكريم بطريقة سهلة ومنظمة مع الأمثلة التطبيقية</p>
+        
+        <div className="search-bar">
+          <input 
+            type="text" 
+            placeholder="ابحث عن درس..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          <button><i className="fas fa-search"></i></button>
+        </div>
+        
+        <div className="tab-buttons">
+          <button 
+            className={`tab-btn ${activeTab === 'lessons' ? 'active' : ''}`}
+            onClick={() => setActiveTab('lessons')}
+          >
+            <i className="fas fa-book"></i> الدروس
+          </button>
+          <button 
+            className={`tab-btn ${activeTab === 'practice' ? 'active' : ''}`}
+            onClick={() => setActiveTab('practice')}
+          >
+            <i className="fas fa-microphone"></i> التدريبات
+          </button>
+          <button 
+            className={`tab-btn ${activeTab === 'resources' ? 'active' : ''}`}
+            onClick={() => setActiveTab('resources')}
+          >
+            <i className="fas fa-file-pdf"></i> المصادر
+          </button>
+        </div>
+      </div>
+      
+      {activeTab === 'lessons' && (
+        <div className="tajweed-lessons">
+          <div className="user-progress-bar">
+            <div className="progress-label">تقدمك في دروس التجويد:</div>
+            <div className="progress-container">
+              <div 
+                className="progress-bar" 
+                style={{width: `${calculateProgress()}%`}}
+              ></div>
+            </div>
+            <div className="progress-percentage">{calculateProgress()}%</div>
+          </div>
+          
+          <div className="lessons-content">
+            <div className="categories-sidebar">
+              {lessonCategories.map(category => (
+                <div 
+                  key={category.id}
+                  className={`category-item ${activeLessonCategory?.id === category.id ? 'active' : ''}`}
+                  onClick={() => handleCategoryClick(category)}
+                >
+                  <div className="category-icon">
+                    <i className={category.icon}></i>
+                  </div>
+                  <div className="category-info">
+                    <div className="category-title">{category.title}</div>
+                    <div className="category-lessons-count">{category.lessons.length} درس</div>
+                  </div>
+                  <div className="category-progress">
+                    {category.lessons.filter(lesson => isLessonCompleted(lesson.id)).length}/{category.lessons.length}
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            {activeLessonCategory && !selectedLesson && (
+              <div className="lessons-list">
+                <h3>{activeLessonCategory.title}</h3>
+                <p className="category-description">{activeLessonCategory.description}</p>
+                
+                <div className="lessons-grid">
+                  {filterLessons(activeLessonCategory.lessons).map(lesson => (
+                    <div 
+                      key={lesson.id} 
+                      className={`lesson-card ${isLessonCompleted(lesson.id) ? 'completed' : ''}`}
+                      onClick={() => handleLessonClick(lesson)}
+                    >
+                      <div className="lesson-card-header">
+                        <div className="lesson-icon">
+                          <i className={lesson.icon || 'fas fa-book'}></i>
+                        </div>
+                        <div className="lesson-status">
+                          {isLessonCompleted(lesson.id) && <i className="fas fa-check-circle"></i>}
+                        </div>
+                      </div>
+                      <div className="lesson-title">{lesson.title}</div>
+                      <div className="lesson-description">{lesson.description}</div>
+                      <div className="lesson-meta">
+                        <span><i className="fas fa-clock"></i> {lesson.duration}</span>
+                        <span><i className="fas fa-layer-group"></i> {lesson.level}</span>
+                      </div>
+                      {getLessonQuizScore(lesson.id) !== null && (
+                        <div className="lesson-score">
+                          <i className="fas fa-award"></i> {getLessonQuizScore(lesson.id)}%
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {selectedLesson && (
+              <div className="lesson-content">
+                <div className="lesson-header">
+                  <button onClick={() => setSelectedLesson(null)} className="back-button">
+                    <i className="fas fa-arrow-right"></i> العودة
+                  </button>
+                  <h3>{selectedLesson.title}</h3>
+                  <div className="lesson-actions">
+                    <button 
+                      onClick={handleLessonComplete}
+                      className={`complete-btn ${isLessonCompleted(selectedLesson.id) ? 'completed' : ''}`}
+                    >
+                      {isLessonCompleted(selectedLesson.id) ? 'تم الإنجاز' : 'تعليم كمنجز'}
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="lesson-body">
+                  {selectedLesson.content.map((section, index) => (
+                    <div key={index} className="lesson-section">
+                      {section.title && <h4>{section.title}</h4>}
+                      {section.text && <p dangerouslySetInnerHTML={{ __html: section.text }}></p>}
+                      {section.image && (
+                        <div className="lesson-image">
+                          <img src={section.image} alt={section.title || 'توضيح'} />
+                        </div>
+                      )}
+                      {section.audio && (
+                        <div className="lesson-audio">
+                          <h5>استمع إلى المثال:</h5>
+                          <audio controls src={section.audio}></audio>
+                        </div>
+                      )}
+                      {section.examples && (
+                        <div className="lesson-examples">
+                          <h5>أمثلة تطبيقية:</h5>
+                          <div className="examples-grid">
+                            {section.examples.map((example, exIndex) => (
+                              <div key={exIndex} className="example-item">
+                                <div className="arabic-text">{example.text}</div>
+                                <div className="example-details">
+                                  <span>{example.surah} - الآية {example.ayah}</span>
+                                  {example.audio && (
+                                    <audio controls src={example.audio}></audio>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                
+                {selectedLesson.quiz && (
+                  <div className="lesson-quiz">
+                    <h4>اختبر معلوماتك</h4>
+                    <p>أكمل هذا الاختبار للتأكد من فهمك لقواعد التجويد المشروحة في هذا الدرس.</p>
+                    <Link to={`/tajweed-quiz/${selectedLesson.id}`} className="quiz-btn">
+                      <i className="fas fa-question-circle"></i> بدء الاختبار
+                    </Link>
+                  </div>
+                )}
+                
+                {selectedLesson.nextLessons && (
+                  <div className="next-lessons">
+                    <h4>الدروس ذات الصلة</h4>
+                    <div className="next-lessons-grid">
+                      {selectedLesson.nextLessons.map(nextLesson => {
+                        const lesson = lessonCategories
+                          .flatMap(cat => cat.lessons)
+                          .find(l => l.id === nextLesson);
+                        if (!lesson) return null;
+                        
+                        return (
+                          <div 
+                            key={lesson.id} 
+                            className="next-lesson-card"
+                            onClick={() => handleLessonClick(lesson)}
+                          >
+                            <i className={lesson.icon || 'fas fa-book'}></i>
+                            <span>{lesson.title}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      
+      {activeTab === 'practice' && (
+        <div className="tajweed-practice">
+          <h3>تدريبات التجويد</h3>
+          <p>تدرب على تطبيق قواعد التجويد بشكل عملي من خلال التمارين التفاعلية</p>
+          
+          <div className="practice-options">
+            <Link to="/recitation-practice" className="practice-card">
+              <div className="practice-icon">
+                <i className="fas fa-microphone"></i>
+              </div>
+              <h4>تسميع وتصحيح التلاوة</h4>
+              <p>سجل تلاوتك واحصل على تقييم مباشر لمهارات التجويد لديك</p>
+            </Link>
+            
+            <div className="practice-card">
+              <div className="practice-icon">
+                <i className="fas fa-headphones"></i>
+              </div>
+              <h4>تمارين الاستماع والتمييز</h4>
+              <p>استمع وميز بين أحكام التجويد المختلفة في الآيات</p>
+            </div>
+            
+            <div className="practice-card">
+              <div className="practice-icon">
+                <i className="fas fa-pencil-alt"></i>
+              </div>
+              <h4>تحديد أحكام التجويد</h4>
+              <p>حدد مواضع أحكام التجويد في الآيات القرآنية</p>
+            </div>
+            
+            <div className="practice-card">
+              <div className="practice-icon">
+                <i className="fas fa-graduation-cap"></i>
+              </div>
+              <h4>اختبارات شاملة</h4>
+              <p>اختبر معرفتك الشاملة بقواعد التجويد</p>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {activeTab === 'resources' && (
+        <div className="tajweed-resources">
+          <h3>مصادر تعلم التجويد</h3>
+          <p>مجموعة من الكتب والمراجع والوسائط المتعددة لتعميق فهمك لعلم التجويد</p>
+          
+          <div className="resources-grid">
+            <div className="resource-card">
+              <div className="resource-icon">
+                <i className="fas fa-book"></i>
+              </div>
+              <div className="resource-info">
+                <h4>كتاب البرهان في تجويد القرآن</h4>
+                <p>للشيخ محمد الصادق قمحاوي</p>
+                <div className="resource-actions">
+                  <button><i className="fas fa-download"></i> تحميل</button>
+                  <button><i className="fas fa-eye"></i> قراءة</button>
+                </div>
+              </div>
+            </div>
+            
+            <div className="resource-card">
+              <div className="resource-icon">
+                <i className="fas fa-video"></i>
+              </div>
+              <div className="resource-info">
+                <h4>سلسلة فيديوهات تعليم التجويد</h4>
+                <p>شرح مبسط لجميع أحكام التجويد</p>
+                <div className="resource-actions">
+                  <button><i className="fas fa-play"></i> مشاهدة</button>
+                </div>
+              </div>
+            </div>
+            
+            <div className="resource-card">
+              <div className="resource-icon">
+                <i className="fas fa-file-pdf"></i>
+              </div>
+              <div className="resource-info">
+                <h4>ملخص أحكام التجويد</h4>
+                <p>ملخص شامل لجميع قواعد وأحكام التجويد</p>
+                <div className="resource-actions">
+                  <button><i className="fas fa-download"></i> تحميل</button>
+                  <button><i className="fas fa-print"></i> طباعة</button>
+                </div>
+              </div>
+            </div>
+            
+            <div className="resource-card">
+              <div className="resource-icon">
+                <i className="fas fa-headphones"></i>
+              </div>
+              <div className="resource-info">
+                <h4>تسجيلات صوتية لأمثلة التجويد</h4>
+                <p>مجموعة من التسجيلات الصوتية لتوضيح أحكام التجويد</p>
+                <div className="resource-actions">
+                  <button><i className="fas fa-play"></i> استماع</button>
+                  <button><i className="fas fa-download"></i> تحميل</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Tajweed Data 
+const tajweedData = {
+  categories: [
+    {
+      id: 1,
+      title: "أساسيات التجويد",
+      icon: "fas fa-star",
+      description: "تعلم المبادئ الأساسية لعلم التجويد والمصطلحات الأساسية",
+      lessons: [
+        {
+          id: 101,
+          title: "مقدمة في علم التجويد",
+          icon: "fas fa-info-circle",
+          description: "تعريف علم التجويد وأهميته وفضله",
+          duration: "15 دقيقة",
+          level: "مبتدئ",
+          content: [
+            {
+              title: "تعريف علم التجويد",
+              text: "التجويد لغة: التحسين.<br>واصطلاحاً: إخراج كل حرف من مخرجه وإعطاؤه حقه ومستحقه من الصفات."
+            },
+            {
+              title: "حكم تعلم التجويد",
+              text: "تعلم أحكام التجويد فرض كفاية، والعمل به فرض عين على كل مسلم ومسلمة مكلف يقرأ القرآن."
+            },
+            {
+              title: "فضل تعلم التجويد",
+              text: "قال النبي صلى الله عليه وسلم: «الماهر بالقرآن مع السفرة الكرام البررة، والذي يقرأ القرآن ويتتعتع فيه وهو عليه شاق له أجران»."
+            }
+          ],
+          quiz: true,
+          nextLessons: [102, 103]
+        },
+        {
+          id: 102,
+          title: "اللحن وأنواعه",
+          icon: "fas fa-exclamation-triangle",
+          description: "تعرف على أنواع اللحن وكيفية تجنبه",
+          duration: "20 دقيقة",
+          level: "مبتدئ",
+          content: [
+            {
+              title: "تعريف اللحن",
+              text: "اللحن هو الخطأ وعدم الصواب في قراءة القرآن الكريم."
+            },
+            {
+              title: "أنواع اللحن",
+              text: "ينقسم اللحن إلى قسمين:<br>1. اللحن الجلي: وهو خطأ ظاهر يخل بالمعنى أو القواعد.<br>2. اللحن الخفي: وهو خطأ دقيق يتعلق بترك مراعاة أحكام التجويد."
+            },
+            {
+              examples: [
+                {
+                  text: "بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ",
+                  surah: "الفاتحة",
+                  ayah: "1"
+                }
+              ]
+            }
+          ],
+          quiz: true,
+          nextLessons: [101, 103]
+        }
+      ]
+    },
+    {
+      id: 2,
+      title: "مخارج الحروف",
+      icon: "fas fa-language",
+      description: "تعلم الأماكن الصحيحة لخروج الحروف العربية",
+      lessons: [
+        {
+          id: 201,
+          title: "تعريف المخارج وأقسامها",
+          description: "مقدمة عن مخارج الحروف وأقسامها الرئيسية",
+          duration: "25 دقيقة",
+          level: "متوسط",
+          content: [
+            {
+              title: "تعريف المخرج",
+              text: "المخرج هو موضع خروج الحرف وتمييزه عن غيره."
+            },
+            {
+              title: "أقسام المخارج",
+              text: "تنقسم مخارج الحروف إلى خمسة مخارج رئيسية:<br>1. الجوف<br>2. الحلق<br>3. اللسان<br>4. الشفتين<br>5. الخيشوم"
+            },
+            {
+              image: "/images/tajweed/makharij.png"
+            }
+          ],
+          quiz: true,
+          nextLessons: [202, 203]
+        }
+      ]
+    }
+  ]
+};
+
+export default Tajweed;

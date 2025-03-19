@@ -1,0 +1,71 @@
+quran-educational-app/
+│
+├── public/
+│   ├── _redirects                 # ملف توجيهات Netlify
+│   ├── favicon.ico                # أيقونة الموقع
+│   ├── index.html                 # ملف HTML الرئيسي
+│   ├── logo.png                   # شعار التطبيق
+│   ├── manifest.json              # ملف وصف التطبيق للأجهزة المحمولة
+│   └── robots.txt                 # ملف توجيهات محركات البحث
+│
+├── src/
+│   ├── App.js                     # المكون الرئيسي للتطبيق
+│   ├── App.css                    # أنماط CSS الرئيسية
+│   ├── index.js                   # نقطة الدخول للتطبيق
+│   ├── index.css                  # أنماط CSS الأساسية
+│   │
+│   ├── components/                # مجلد مكونات واجهة المستخدم
+│   │   ├── AudioPlayer.js         # مكون مشغل الصوت
+│   │   ├── AudioPlayer.css        # أنماط مشغل الصوت
+│   │   ├── AskScholars.js         # مكون اسأل أهل العلم
+│   │   ├── AskScholars.css        # أنماط اسأل أهل العلم
+│   │   ├── Dashboard.js           # مكون لوحة التحكم الرئيسية
+│   │   ├── Dashboard.css          # أنماط لوحة التحكم
+│   │   ├── LanguageSelector.js    # مكون اختيار اللغة
+│   │   ├── LearningResources.js   # مكون موارد التعليم
+│   │   ├── LearningResources.css  # أنماط موارد التعليم
+│   │   ├── QuranReader.js         # مكون قارئ القرآن
+│   │   ├── QuranReader.css        # أنماط قارئ القرآن
+│   │   ├── RecitationPractice.js  # مكون ممارسة التلاوة
+│   │   ├── RecitationPractice.css # أنماط ممارسة التلاوة
+│   │   ├── StudyCircles.js        # مكون حلقات التحفيظ
+│   │   ├── StudyCircles.css       # أنماط حلقات التحفيظ
+│   │   ├── Tafseer.js             # مكون التفسير
+│   │   ├── Tafseer.css            # أنماط التفسير
+│   │   ├── Tajweed.js             # مكون تعلم التجويد
+│   │   ├── Tajweed.css            # أنماط تعلم التجويد
+│   │   ├── UserProfile.js         # مكون ملف المستخدم
+│   │   ├── UserProfile.css        # أنماط ملف المستخدم
+│   │   └── VirtualClasses.js      # مكون الفصول الافتراضية
+│   │       └── VirtualClasses.css # أنماط الفصول الافتراضية
+│   │
+│   ├── context/                   # مجلد سياقات React
+│   │   ├── AuthContext.js         # سياق المصادقة
+│   │   ├── LanguageContext.js     # سياق اللغة
+│   │   ├── QuranContext.js        # سياق القرآن
+│   │   └── ThemeContext.js        # سياق السمة
+│   │
+│   ├── hooks/                     # مجلد الخطافات المخصصة
+│   │   ├── useAudio.js            # خطاف للتعامل مع الصوت
+│   │   └── useLocalStorage.js     # خطاف للتعامل مع التخزين المحلي
+│   │
+│   └── utils/                     # مجلد الأدوات المساعدة
+│       ├── api.js                 # دوال التعامل مع API
+│       ├── formatters.js          # دوال تنسيق البيانات
+│       └── validators.js          # دوال التحقق من البيانات
+│
+├── .env                           # متغيرات البيئة (لا تضمن في git)
+├── .env.development               # متغيرات بيئة التطوير
+├── .env.production                # متغيرات بيئة الإنتاج
+├── .gitignore                     # ملفات ومجلدات مستثناة من git
+├── netlify.toml                   # تكوين Netlify
+├── package.json                   # تبعيات المشروع وسكريبتات NPM
+├── package-lock.json              # نسخ دقيقة من التبعيات
+└── README.md                      # توثيق المشروع
+
+محتوى الملف المضغوط (quran-educational-app.zip):
+- جميع الملفات والمجلدات المذكورة أعلاه
+- ملف التعليمات للنشر والاستخدام (DEPLOY.md)
+- المكونات الأساسية جاهزة للاستخدام مع alquran.cloud API
+- الأنماط وملفات CSS مكتملة
+- ملفات التكوين لنشر التطبيق على Netlify

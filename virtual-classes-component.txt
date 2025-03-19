@@ -1,0 +1,349 @@
+// components/VirtualClasses.js
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import './VirtualClasses.css';
+
+const VirtualClasses = () => {
+  const [classes, setClasses] = useState([]);
+  const [userClasses, setUserClasses] = useState([]);
+  const [filteredClasses, setFilteredClasses] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [filters, setFilters] = useState({
+    level: 'all',
+    day: 'all',
+    topic: 'all',
+    search: ''
+  });
+  const [view, setView] = useState('browse'); // 'browse', 'myClasses', 'class'
+  const [selectedClass, setSelectedClass] = useState(null);
+  const [upcomingSession, setUpcomingSession] = useState(null);
+  
+  useEffect(() => {
+    // Simulate API fetch
+    setTimeout(() => {
+      setClasses(mockClasses);
+      
+      // Get user enrolled classes from local storage
+      const savedUserClasses = localStorage.getItem('userClasses');
+      if (savedUserClasses) {
+        setUserClasses(JSON.parse(savedUserClasses));
+      }
+      
+      setIsLoading(false);
+    }, 1000);
+  }, []);
+  
+  useEffect(() => {
+    applyFilters();
+  }, [filters, classes]);
+  
+  const applyFilters = () => {
+    let result = [...classes];
+    
+    // Apply level filter
+    if (filters.level !== 'all') {
+      result = result.filter(cls => cls.level === filters.level);
+    }
+    
+    // Apply day filter
+    if (filters.day !== 'all') {
+      result = result.filter(cls => cls.schedule.some(
+        session => session.day.toLowerCase() === filters.day.toLowerCase()
+      ));
+    }
+    
+    // Apply topic filter
+    if (filters.topic !== 'all') {
+      result = result.filter(cls => cls.topics.includes(filters.topic));
+    }
+    
+    // Apply search filter
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase();
+      result = result.filter(cls => 
+        cls.title.toLowerCase().includes(searchLower) ||
+        cls.instructor.name.toLowerCase().includes(searchLower) ||
+        cls.description.toLowerCase().includes(searchLower)
+      );
+    }
+    
+    setFilteredClasses(result);
+  };
+  
+  const handleFilterChange = (filterName, value) => {
+    setFilters({
+      ...filters,
+      [filterName]: value
+    });
+  };
+  
+  const enrollClass = (classId) => {
+    // Check if already enrolled
+    if (userClasses.includes(classId)) {
+      return;
+    }
+    
+    // Add to enrolled classes
+    const updatedUserClasses = [...userClasses, classId];
+    setUserClasses(updatedUserClasses);
+    
+    // Save to local storage
+    localStorage.setItem('userClasses', JSON.stringify(updatedUserClasses));
+    
+    alert('تم التسجيل في الفصل بنجاح');
+  };
+  
+  const unenrollClass = (classId) => {
+    // Remove from enrolled classes
+    const updatedUserClasses = userClasses.filter(id => id !== classId);
+    setUserClasses(updatedUserClasses);
+    
+    // Save to local storage
+    localStorage.setItem('userClasses', JSON.stringify(updatedUserClasses));
+    
+    alert('تم إلغاء التسجيل من الفصل');
+  };
+  
+  const isEnrolled = (classId) => {
+    return userClasses.includes(classId);
+  };
+  
+  const selectClass = (classItem) => {
+    setSelectedClass(classItem);
+    
+    // Find upcoming session
+    const now = new Date();
+    const upcoming = classItem.schedule
+      .map(session => {
+        // Parse day to get date
+        const sessionDate = getNextDayDate(session.day);
+        const [startHour, startMinute] = session.time.split(':').map(Number);
+        sessionDate.setHours(startHour, startMinute);
+        
+        return {
+          ...session,
+          date: sessionDate
+        };
+      })
+      .filter(session => session.date > now)
+      .sort((a, b) => a.date - b.date)[0];
+    
+    setUpcomingSession(upcoming);
+    setView('class');
+  };
+  
+  // Helper function to get the next date for a given day of the week
+  const getNextDayDate = (dayName) => {
+    const days = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+    const dayIndex = days.indexOf(dayName);
+    
+    if (dayIndex === -1) return new Date(); // Invalid day name
+    
+    const today = new Date();
+    const todayDayIndex = today.getDay();
+    let daysUntilNext = dayIndex - todayDayIndex;
+    
+    if (daysUntilNext <= 0) {
+      daysUntilNext += 7; // Next week
+    }
+    
+    const nextDate = new Date();
+    nextDate.setDate(today.getDate() + daysUntilNext);
+    return nextDate;
+  };
+  
+  const formatDate = (date) => {
+    if (!date) return '';
+    
+    // Format date to Arabic locale
+    return date.toLocaleDateString('ar-SA', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+  
+  const formatTime = (timeString) => {
+    if (!timeString) return '';
+    
+    // Format 24-hour time to 12-hour time
+    const [hours, minutes] = timeString.split(':').map(Number);
+    const period = hours >= 12 ? 'مساءً' : 'صباحاً';
+    const hours12 = hours % 12 || 12;
+    
+    return `${hours12}:${minutes.toString().padStart(2, '0')} ${period}`;
+  };
+  
+  if (isLoading) {
+    return (
+      <div className="virtual-classes-loading">
+        <div className="loader"></div>
+        <p>جاري تحميل الفصول الافتراضية...</p>
+      </div>
+    );
+  }
+  
+  return (
+    <div className="virtual-classes-container">
+      {view === 'browse' || view === 'myClasses' ? (
+        <>
+          <div className="virtual-classes-header">
+            <h2>الفصول الافتراضية</h2>
+            <p>تعلم القرآن الكريم وعلومه مع أفضل المعلمين في فصول مباشرة عبر الإنترنت</p>
+            
+            <div className="view-selector">
+              <button 
+                className={`view-btn ${view === 'browse' ? 'active' : ''}`}
+                onClick={() => setView('browse')}
+              >
+                <i className="fas fa-th-large"></i> تصفح الفصول
+              </button>
+              <button 
+                className={`view-btn ${view === 'myClasses' ? 'active' : ''}`}
+                onClick={() => setView('myClasses')}
+              >
+                <i className="fas fa-user-graduate"></i> فصولي
+              </button>
+            </div>
+          </div>
+          
+          <div className="classes-filters">
+            <div className="filter-group">
+              <label>المستوى:</label>
+              <select 
+                value={filters.level}
+                onChange={(e) => handleFilterChange('level', e.target.value)}
+              >
+                <option value="all">الكل</option>
+                <option value="beginner">مبتدئ</option>
+                <option value="intermediate">متوسط</option>
+                <option value="advanced">متقدم</option>
+              </select>
+            </div>
+            
+            <div className="filter-group">
+              <label>اليوم:</label>
+              <select 
+                value={filters.day}
+                onChange={(e) => handleFilterChange('day', e.target.value)}
+              >
+                <option value="all">الكل</option>
+                <option value="الأحد">الأحد</option>
+                <option value="الاثنين">الاثنين</option>
+                <option value="الثلاثاء">الثلاثاء</option>
+                <option value="الأربعاء">الأربعاء</option>
+                <option value="الخميس">الخميس</option>
+                <option value="الجمعة">الجمعة</option>
+                <option value="السبت">السبت</option>
+              </select>
+            </div>
+            
+            <div className="filter-group">
+              <label>الموضوع:</label>
+              <select 
+                value={filters.topic}
+                onChange={(e) => handleFilterChange('topic', e.target.value)}
+              >
+                <option value="all">الكل</option>
+                <option value="حفظ">حفظ القرآن</option>
+                <option value="تجويد">التجويد</option>
+                <option value="تفسير">التفسير</option>
+                <option value="تلاوة">التلاوة</option>
+              </select>
+            </div>
+            
+            <div className="filter-group search">
+              <input 
+                type="text" 
+                placeholder="ابحث عن فصل..." 
+                value={filters.search}
+                onChange={(e) => handleFilterChange('search', e.target.value)}
+              />
+            </div>
+          </div>
+          
+          <div className="classes-list">
+            {view === 'browse' && filteredClasses.length === 0 && (
+              <div className="no-classes">
+                <i className="fas fa-search"></i>
+                <p>لا توجد فصول تطابق معايير البحث</p>
+              </div>
+            )}
+            
+            {view === 'myClasses' && userClasses.length === 0 && (
+              <div className="no-classes">
+                <i className="fas fa-user-graduate"></i>
+                <p>أنت غير مسجل في أي فصل حالياً</p>
+                <button onClick={() => setView('browse')} className="browse-btn">
+                  تصفح الفصول المتاحة
+                </button>
+              </div>
+            )}
+            
+            {view === 'browse' && filteredClasses.map(classItem => (
+              <div key={classItem.id} className="class-card">
+                <div className="class-header" style={{ backgroundColor: classItem.color || '#4CAF50' }}>
+                  <h3>{classItem.title}</h3>
+                  <div className="class-level">{getLevelText(classItem.level)}</div>
+                </div>
+                
+                <div className="class-details">
+                  <div className="instructor-info">
+                    <img src={classItem.instructor.avatar} alt={classItem.instructor.name} />
+                    <div>
+                      <span className="instructor-name">{classItem.instructor.name}</span>
+                      <span className="instructor-title">{classItem.instructor.title}</span>
+                    </div>
+                  </div>
+                  
+                  <p className="class-description">{classItem.description}</p>
+                  
+                  <div className="class-schedule">
+                    <h4>المواعيد:</h4>
+                    <ul>
+                      {classItem.schedule.map((session, index) => (
+                        <li key={index}>
+                          <i className="fas fa-calendar-alt"></i> {session.day} من {formatTime(session.time)} لمدة {session.duration} دقيقة
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  
+                  <div className="class-topics">
+                    {classItem.topics.map((topic, index) => (
+                      <span key={index} className="topic-tag">{topic}</span>
+                    ))}
+                  </div>
+                  
+                  <div className="class-stats">
+                    <div>
+                      <i className="fas fa-users"></i>
+                      <span>{classItem.enrolledCount} مشترك</span>
+                    </div>
+                    <div>
+                      <i className="fas fa-star"></i>
+                      <span>{classItem.rating} ({classItem.reviewsCount} تقييم)</span>
+                    </div>
+                  </div>
+                  
+                  <div className="class-actions">
+                    <button 
+                      onClick={() => selectClass(classItem)} 
+                      className="details-btn"
+                    >
+                      <i className="fas fa-info-circle"></i> التفاصيل
+                    </button>
+                    
+                    {isEnrolled(classItem.id) ? (
+                      <button 
+                        onClick={() => unenrollClass(classItem.id)} 
+                        className="unenroll-btn"
+                      >
+                        <i className="fas fa-user-minus"></i> إلغاء التسجيل
+                      </button>
+                    ) : (
+                      <button 
+                        onClick={() => enrollClass(classItem.id)} 
+                        className="enroll-btn"
+                      >

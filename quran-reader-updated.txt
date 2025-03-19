@@ -1,0 +1,516 @@
+// components/QuranReader.js
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useQuran } from '../context/QuranContext';
+import { useLanguage } from '../context/LanguageContext';
+import AudioPlayer from './AudioPlayer';
+import './QuranReader.css';
+
+const QuranReader = () => {
+  const navigate = useNavigate();
+  const { 
+    surahs, 
+    currentSurah, 
+    setCurrentSurah, 
+    currentAyah, 
+    setCurrentAyah,
+    quranData,
+    isLoading,
+    error,
+    fetchSurah,
+    fetchPage,
+    addBookmark,
+    updateLastRead,
+    selectedTranslation,
+    availableTranslations,
+    changeTranslation
+  } = useQuran();
+  
+  const { language } = useLanguage();
+  
+  const [viewMode, setViewMode] = useState('surah'); // 'surah' or 'page'
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(604);
+  const [showTranslation, setShowTranslation] = useState(true);
+  const [fontSizeArabic, setFontSizeArabic] = useState(28);
+  const [fontSizeTranslation, setFontSizeTranslation] = useState(18);
+  const [audioPlaying, setAudioPlaying] = useState(false);
+  const [selectedAyah, setSelectedAyah] = useState(null);
+  const [ayahOptions, setAyahOptions] = useState(false);
+  const [searchText, setSearchText] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState(null);
+  const [highlightedAyahs, setHighlightedAyahs] = useState([]);
+  const [tafseerName, setTafseerName] = useState('ar.muyassar');
+  
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    // تحديد الوضع من التخزين المحلي إن وجد
+    const savedViewMode = localStorage.getItem('quran-view-mode');
+    if (savedViewMode) {
+      setViewMode(savedViewMode);
+    }
+    
+    // تحديد حجم الخط من التخزين المحلي إن وجد
+    const savedFontSizeArabic = localStorage.getItem('quran-font-size-arabic');
+    if (savedFontSizeArabic) {
+      setFontSizeArabic(parseInt(savedFontSizeArabic));
+    }
+    
+    const savedFontSizeTranslation = localStorage.getItem('quran-font-size-translation');
+    if (savedFontSizeTranslation) {
+      setFontSizeTranslation(parseInt(savedFontSizeTranslation));
+    }
+    
+    // تحديد إظهار الترجمة من التخزين المحلي إن وجد
+    const savedShowTranslation = localStorage.getItem('quran-show-translation');
+    if (savedShowTranslation !== null) {
+      setShowTranslation(savedShowTranslation === 'true');
+    }
+    
+    // تحميل البيانات حسب وضع العرض
+    if (viewMode === 'surah') {
+      fetchSurah(currentSurah);
+    } else {
+      fetchPage(currentPage);
+    }
+  }, []);
+  
+  // تحديث عند تغيير السورة أو الصفحة
+  useEffect(() => {
+    if (viewMode === 'surah' && currentSurah) {
+      fetchSurah(currentSurah);
+    } else if (viewMode === 'page' && currentPage) {
+      fetchPage(currentPage);
+    }
+  }, [viewMode, currentSurah, currentPage, selectedTranslation]);
+
+  const handleSurahChange = (event) => {
+    const surahId = parseInt(event.target.value);
+    setCurrentSurah(surahId);
+    setCurrentAyah(1);
+    setSelectedAyah(null);
+    setAyahOptions(false);
+    
+    if (viewMode === 'page') {
+      // تحديد الصفحة التي تبدأ بها السورة
+      const selectedSurah = surahs.find(surah => surah.number === surahId);
+      if (selectedSurah && selectedSurah.pages && selectedSurah.pages.length > 0) {
+        setCurrentPage(selectedSurah.pages[0]);
+      }
+      setViewMode('surah');
+      localStorage.setItem('quran-view-mode', 'surah');
+    }
+  };
+
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+      setSelectedAyah(null);
+      setAyahOptions(false);
+      
+      if (viewMode === 'surah') {
+        setViewMode('page');
+        localStorage.setItem('quran-view-mode', 'page');
+      }
+    }
+  };
+
+  const handleAyahClick = (ayah) => {
+    setSelectedAyah(ayah);
+    setAyahOptions(true);
+    setCurrentAyah(ayah.numberInSurah || ayah.number);
+    updateLastRead(ayah.surah || currentSurah, ayah.numberInSurah || ayah.number);
+  };
+
+  const handleAyahAction = (action, ayah) => {
+    setAyahOptions(false);
+    
+    switch(action) {
+      case 'tafseer':
+        navigate(`/tafseer/${ayah.surah || currentSurah}/${ayah.numberInSurah}`);
+        break;
+      case 'listen':
+        playAyahAudio(ayah);
+        break;
+      case 'bookmark':
+        bookmarkAyah(ayah);
+        break;
+      case 'copy':
+        copyAyahText(ayah);
+        break;
+      case 'share':
+        shareAyah(ayah);
+        break;
+      default:
+        break;
+    }
+  };
+
+  const playAyahAudio = (ayah) => {
+    setCurrentAyah(ayah.numberInSurah);
+    setAudioPlaying(true);
+  };
+
+  const bookmarkAyah = (ayah) => {
+    const surahNum = ayah.surah || currentSurah;
+    const ayahNum = ayah.numberInSurah || ayah.number;
+    
+    const bookmark = addBookmark(surahNum, ayahNum);
+    alert(`تم إضافة الآية ${surahNum}:${ayahNum} إلى المفضلة`);
+  };
+
+  const copyAyahText = (ayah) => {
+    const surahNum = ayah.surah || currentSurah;
+    const ayahNum = ayah.numberInSurah || ayah.number;
+    const text = `${ayah.text} [${surahNum}:${ayahNum}]`;
+    
+    navigator.clipboard.writeText(text);
+    alert('تم نسخ الآية');
+  };
+
+  const shareAyah = (ayah) => {
+    const surahNum = ayah.surah || currentSurah;
+    const ayahNum = ayah.numberInSurah || ayah.number;
+    const text = `${ayah.text} [${surahNum}:${ayahNum}]`;
+    
+    if (navigator.share) {
+      navigator.share({
+        title: `الآية ${surahNum}:${ayahNum} من القرآن الكريم`,
+        text: text,
+        url: window.location.href,
+      });
+    } else {
+      alert('المشاركة غير متاحة في هذا المتصفح');
+    }
+  };
+
+  const changeFontSize = (type, increase) => {
+    if (type === 'arabic') {
+      const newSize = increase ? fontSizeArabic + 2 : Math.max(16, fontSizeArabic - 2);
+      setFontSizeArabic(newSize);
+      localStorage.setItem('quran-font-size-arabic', newSize.toString());
+    } else {
+      const newSize = increase ? fontSizeTranslation + 2 : Math.max(12, fontSizeTranslation - 2);
+      setFontSizeTranslation(newSize);
+      localStorage.setItem('quran-font-size-translation', newSize.toString());
+    }
+  };
+
+  const toggleViewMode = () => {
+    const newMode = viewMode === 'page' ? 'surah' : 'page';
+    setViewMode(newMode);
+    localStorage.setItem('quran-view-mode', newMode);
+    
+    if (newMode === 'page') {
+      // إذا كان المستخدم يشاهد سورة، انتقل إلى الصفحة التي تحتوي على الآية الحالية
+      if (quranData && quranData.ayahs && quranData.ayahs.length > 0) {
+        const currentAyahObj = quranData.ayahs.find(ayah => ayah.numberInSurah === currentAyah);
+        if (currentAyahObj && currentAyahObj.page) {
+          setCurrentPage(currentAyahObj.page);
+        }
+      }
+    } else {
+      // إذا كان المستخدم يشاهد صفحة، انتقل إلى السورة التي تحتوي على أول آية في الصفحة
+      if (quranData && quranData.ayahs && quranData.ayahs.length > 0) {
+        setCurrentSurah(quranData.ayahs[0].surah);
+        setCurrentAyah(quranData.ayahs[0].numberInSurah);
+      }
+    }
+  };
+
+  const toggleTranslation = () => {
+    const newValue = !showTranslation;
+    setShowTranslation(newValue);
+    localStorage.setItem('quran-show-translation', newValue.toString());
+  };
+
+  const handleTranslationChange = (event) => {
+    changeTranslation(event.target.value);
+  };
+
+  const handleSearch = async () => {
+    if (!searchText.trim()) return;
+    
+    try {
+      setSearchLoading(true);
+      setSearchError(null);
+      
+      const response = await fetch(`https://api.alquran.cloud/v1/search/${encodeURIComponent(searchText)}/all/ar`);
+      const data = await response.json();
+      
+      if (data.code === 200 && data.status === 'OK') {
+        setSearchResults(data.data.matches);
+        
+        // تمييز الآيات التي تطابق البحث
+        const matchedAyahs = data.data.matches.map(match => ({
+          surah: match.surah.number,
+          ayah: match.numberInSurah
+        }));
+        
+        setHighlightedAyahs(matchedAyahs);
+      } else {
+        setSearchError('حدث خطأ في البحث');
+        setSearchResults([]);
+      }
+      
+      setSearchLoading(false);
+    } catch (error) {
+      console.error('خطأ في البحث:', error);
+      setSearchError('حدث خطأ في الاتصال أثناء البحث');
+      setSearchResults([]);
+      setSearchLoading(false);
+    }
+  };
+
+  const goToSearchResult = (result) => {
+    setCurrentSurah(result.surah.number);
+    setCurrentAyah(result.numberInSurah);
+    setViewMode('surah');
+    setSearchText('');
+    setSearchResults([]);
+  };
+
+  const isAyahHighlighted = (surah, ayah) => {
+    return highlightedAyahs.some(a => a.surah === surah && a.ayah === ayah);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="quran-loading">
+        <div className="loader"></div>
+        <p>جاري تحميل المصحف...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="quran-error">
+        <i className="fas fa-exclamation-triangle"></i>
+        <p>{error}</p>
+        <button onClick={() => window.location.reload()}>إعادة المحاولة</button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="quran-reader-container" ref={containerRef}>
+      <div className="quran-controls">
+        <div className="quran-main-controls">
+          <div className="quran-selector">
+            <select value={currentSurah} onChange={handleSurahChange}>
+              {surahs.map(surah => (
+                <option key={surah.number} value={surah.number}>
+                  {surah.number}. {surah.name} ({surah.englishName})
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          <div className="view-controls">
+            <button onClick={toggleViewMode} className={`view-mode-btn ${viewMode}`}>
+              {viewMode === 'page' ? 'عرض السورة' : 'عرض الصفحات'}
+            </button>
+            
+            {viewMode === 'page' && (
+              <div className="page-controls">
+                <button 
+                  onClick={() => handlePageChange(currentPage - 1)} 
+                  disabled={currentPage <= 1}
+                  className="page-nav-btn"
+                >
+                  <i className="fas fa-chevron-right"></i>
+                </button>
+                <div className="page-input-container">
+                  <input 
+                    type="number" 
+                    min="1" 
+                    max={totalPages} 
+                    value={currentPage}
+                    onChange={(e) => handlePageChange(parseInt(e.target.value) || 1)}
+                  />
+                  <span>من {totalPages}</span>
+                </div>
+                <button 
+                  onClick={() => handlePageChange(currentPage + 1)} 
+                  disabled={currentPage >= totalPages}
+                  className="page-nav-btn"
+                >
+                  <i className="fas fa-chevron-left"></i>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+        
+        <div className="quran-search">
+          <input 
+            type="text" 
+            placeholder="ابحث في القرآن..." 
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+          />
+          <button onClick={handleSearch} disabled={searchLoading}>
+            {searchLoading ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-search"></i>}
+          </button>
+        </div>
+        
+        <div className="display-controls">
+          <button onClick={toggleTranslation} className={`translation-toggle ${showTranslation ? 'active' : ''}`}>
+            <i className={`fas ${showTranslation ? 'fa-eye-slash' : 'fa-eye'}`}></i>
+            {showTranslation ? 'إخفاء الترجمة' : 'إظهار الترجمة'}
+          </button>
+          
+          <div className="translation-selector">
+            <select value={selectedTranslation} onChange={handleTranslationChange}>
+              {availableTranslations.map(translation => (
+                <option key={translation.identifier} value={translation.identifier}>
+                  {translation.language === 'ar' ? 'العربية' : translation.language} - {translation.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          <div className="font-controls">
+            <div className="font-size-control">
+              <span>النص العربي:</span>
+              <button onClick={() => changeFontSize('arabic', false)} className="font-btn">-</button>
+              <span className="font-size">{fontSizeArabic}</span>
+              <button onClick={() => changeFontSize('arabic', true)} className="font-btn">+</button>
+            </div>
+            
+            <div className="font-size-control">
+              <span>الترجمة:</span>
+              <button onClick={() => changeFontSize('translation', false)} className="font-btn">-</button>
+              <span className="font-size">{fontSizeTranslation}</span>
+              <button onClick={() => changeFontSize('translation', true)} className="font-btn">+</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {searchResults.length > 0 && (
+        <div className="search-results">
+          <div className="search-results-header">
+            <h3>نتائج البحث ({searchResults.length})</h3>
+            <button onClick={() => setSearchResults([])} className="close-search-btn">
+              <i className="fas fa-times"></i>
+            </button>
+          </div>
+          <div className="search-results-list">
+            {searchResults.map((result, index) => (
+              <div key={index} className="search-result-item" onClick={() => goToSearchResult(result)}>
+                <div className="result-location">
+                  <span className="surah-name">{result.surah.name}</span>
+                  <span className="ayah-number">الآية {result.numberInSurah}</span>
+                </div>
+                <div className="result-text" dangerouslySetInnerHTML={{ __html: result.text.replace(
+                  new RegExp(`(${searchText})`, 'gi'),
+                  '<span class="highlight">$1</span>'
+                )}}></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      
+      {searchError && (
+        <div className="search-error">
+          <i className="fas fa-exclamation-circle"></i>
+          <span>{searchError}</span>
+          <button onClick={() => setSearchError(null)} className="close-error-btn">
+            <i className="fas fa-times"></i>
+          </button>
+        </div>
+      )}
+      
+      <div className={`quran-content ${viewMode}`}>
+        {quranData && quranData.ayahs && quranData.ayahs.map(ayah => {
+          const isHighlighted = isAyahHighlighted(
+            ayah.surah || currentSurah, 
+            ayah.numberInSurah || ayah.number
+          );
+          
+          const isSelected = selectedAyah && (
+            (viewMode === 'surah' && selectedAyah.numberInSurah === ayah.numberInSurah) ||
+            (viewMode === 'page' && selectedAyah.number === ayah.number)
+          );
+          
+          const isPlaying = audioPlaying && currentAyah === (ayah.numberInSurah || ayah.number);
+          
+          return (
+            <div 
+              key={ayah.number} 
+              className={`ayah-container ${isHighlighted ? 'highlighted' : ''} ${isSelected ? 'selected' : ''} ${isPlaying ? 'playing' : ''}`}
+              onClick={() => handleAyahClick(ayah)}
+            >
+              {viewMode === 'page' && ayah.numberInSurah === 1 && (
+                <div className="surah-header">
+                  <h3>{ayah.surahName || 'سورة'}</h3>
+                </div>
+              )}
+              
+              <div className="ayah-text" style={{fontSize: `${fontSizeArabic}px`}}>
+                {ayah.text}
+                <span className="ayah-number">{ayah.numberInSurah || ayah.number}</span>
+              </div>
+              
+              {showTranslation && (
+                <div className="ayah-translation" style={{fontSize: `${fontSizeTranslation}px`}}>
+                  {ayah.translation}
+                </div>
+              )}
+              
+              <div className="ayah-meta">
+                {ayah.juz && <span className="juz-badge">الجزء {ayah.juz}</span>}
+                {ayah.hizbQuarter && <span className="hizb-badge">الحزب {Math.ceil(ayah.hizbQuarter / 4)}.{ayah.hizbQuarter % 4 || 4}</span>}
+                {ayah.sajda && <span className="sajda-badge">سجدة</span>}
+                {viewMode === 'page' && <span className="surah-badge">{ayah.surahName} {ayah.numberInSurah}</span>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      
+      {ayahOptions && selectedAyah && (
+        <div className="ayah-options-modal">
+          <div className="ayah-options-content">
+            <button onClick={() => handleAyahAction('tafseer', selectedAyah)} className="option-btn">
+              <i className="fas fa-book"></i> تفسير
+            </button>
+            <button onClick={() => handleAyahAction('listen', selectedAyah)} className="option-btn">
+              <i className="fas fa-play"></i> استماع
+            </button>
+            <button onClick={() => handleAyahAction('bookmark', selectedAyah)} className="option-btn">
+              <i className="fas fa-bookmark"></i> إضافة للمفضلة
+            </button>
+            <button onClick={() => handleAyahAction('copy', selectedAyah)} className="option-btn">
+              <i className="fas fa-copy"></i> نسخ
+            </button>
+            <button onClick={() => handleAyahAction('share', selectedAyah)} className="option-btn">
+              <i className="fas fa-share-alt"></i> مشاركة
+            </button>
+            <button onClick={() => setAyahOptions(false)} className="cancel-btn">
+              <i className="fas fa-times"></i> إغلاق
+            </button>
+          </div>
+        </div>
+      )}
+      
+      {audioPlaying && (
+        <AudioPlayer 
+          surahId={currentSurah} 
+          ayahId={currentAyah}
+          onClose={() => setAudioPlaying(false)}
+          onAyahChange={(ayahId) => setCurrentAyah(ayahId)}
+        />
+      )}
+    </div>
+  );
+};
+
+export default QuranReader;

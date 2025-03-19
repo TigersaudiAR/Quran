@@ -1,0 +1,82 @@
+// package.json
+{
+  "name": "quran-educational-app",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "@testing-library/jest-dom": "^5.16.5",
+    "@testing-library/react": "^14.0.0",
+    "@testing-library/user-event": "^14.4.3",
+    "axios": "^1.4.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.11.2",
+    "react-scripts": "5.0.1",
+    "web-vitals": "^3.3.2",
+    "react-icons": "^4.8.0"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject",
+    "deploy": "npm run build && netlify deploy --prod"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "netlify-cli": "^15.1.1"
+  }
+}
+
+// netlify.toml
+[build]
+  command = "npm run build"
+  publish = "build"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# تهيئة CORS للوصول إلى API
+[[headers]]
+  for = "/*"
+    [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS"
+    Access-Control-Allow-Headers = "X-Requested-With, Content-Type, Accept"
+
+// .env
+REACT_APP_API_BASE_URL=https://api.alquran.cloud/v1
+REACT_APP_AUDIO_CDN=https://cdn.islamic.network/quran/audio
+
+// public/_redirects
+/* /index.html 200
+
+// تكوين README.md للتوثيق
+# تطبيق القرآن الكريم التعليمي
+
+تطبيق تعليمي شامل للقرآن الكريم يساعد على تعلم وحفظ القرآن بطرق مبتكرة مع مجموعة من الميزات المتقدمة.
+
+## الميزات الرئيسية
+
+- قراءة القرآن الكريم كاملاً مع التفسير
+- الاستماع إلى تلاوة القرآن بأصوات مشاهير القراء
+- تعلم أحكام التجويد بط
